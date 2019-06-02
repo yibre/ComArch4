@@ -1,11 +1,13 @@
 import sys
 
+
 class CacheSet:
     def __init__(self, associativity):
         block = {"valid": False, "dirty": False, "tag": None}
         self.set = []
         for i in range(associativity):
             self.set.append(block)
+
 
 class Cache:
     def __init__(self, associativity, index):
