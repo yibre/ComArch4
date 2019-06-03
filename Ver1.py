@@ -9,15 +9,17 @@ write_miss_count = 0
 clean_eviction_count = 0
 dirty_eviction_count = 0
 
-class CacheSet: # 여기는 건드릴 일 없음! 더이상 이 class를 호출할 일도, 함수를 쓸 일도 없음!
+# 여기는 건드릴 일 없음! 더이상 이 class를 호출할 일도, 함수를 쓸 일도 없음!
+class CacheSet:
     def __init__(self, associativity):
-        block = {"valid": False, "dirty": False, "tag": None} # 한 cache block
+        block = {"dirty": False, "tag": None} # 한 cache block
         self.set = []
         for i in range(associativity):
             self.set.append(block)
 
 class Cache:
     def __init__(self, associativity, blockSize, capacity):
+        self.associativity = associativity
         self.Cache = []
         self.blockOffset = math.log2(blockSize) # offset = log_2(blockSize)
         self.indexLength = capacity / blockSize / associativity * 1024
@@ -27,28 +29,48 @@ class Cache:
         for i in range(self.indexLength):
             self.Cache.append(CacheSet(associativity))
 
+    def access(self, address):
+        for i in range(self.associativity):
+            if self.Cache()[self.findIndexBit(address)][i]['tag'] == self.findTagBit(address):
+                temp = self.Cache()[self.findIndexBit(address)][i]
+                del self.Cache()[self.findIndexBit(address)][i]
+                self.Cache()[self.findIndexBit(address)].append(temp)
+                # 해당 원소가 있으면 list[index]의 해당 블록을 삭제하고 가장 뒤로 보냄 (for eviction)
+                return True
+        # 해당 원소가 없으면 false
+        return False
+
+    def cacheSetFull(self, address):
+        for i in range(self.associativity):
+            if not self.Cache()[self.findIndexBit(address)][i]['tag']:
+                return False
+            # Cache set 안에 하나라도 빈 cache block 이 있으면 false 를 반환, set 이 전부 차 있으면 True 를 반환
+        return True
+
     def read(self, address):
         global read_access_count, total_access_count, read_miss_count
         read_access_count += 1
         total_access_count += 1
-
+        if not self.access(address): # read miss 발생
+            read_miss_count += 1
         pass
 
     def write(self, address):
         global write_access_count, total_access_count, write_miss_count
         write_access_count += 1
         total_access_count += 1
+        if self.access(address): # hit
+            self.Cache()[self.findIndexBit(address)][-1]['dirty'] = True
 
-        pass
 
     def eviction(self, address): # LRU 구현 dirty eviction과 clean eviction 구현
         pass
 
-    def findTagBit(self, address): # return; int 타입
+    def findTagBit(self, address): # return; int value
         TagBit = int(bin(address)[:-(self.blockOffset+self.IndexBitLength)], 2)
         return TagBit
 
-    def findIndexBit(self, address): # return: int 타입
+    def findIndexBit(self, address): # return: int Index value
         IndexBit = int('0b'+bin(address)[:(-self.blockOffset)][-(self.IndexBitLength):], 2)
         return IndexBit
 
