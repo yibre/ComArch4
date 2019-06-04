@@ -31,10 +31,10 @@ class Cache:
 
     def access(self, address):
         for i in range(self.associativity):
-            if self.Cache()[self.findIndexBit(address)][i]['tag'] == self.findTagBit(address):
-                temp = self.Cache()[self.findIndexBit(address)][i]
-                del self.Cache()[self.findIndexBit(address)][i]
-                self.Cache()[self.findIndexBit(address)].append(temp)
+            if self.Cache[self.findIndexBit(address)][i]['tag'] == self.findTagBit(address):
+                temp = self.Cache[self.findIndexBit(address)][i]
+                del self.Cache[self.findIndexBit(address)][i]
+                self.Cache[self.findIndexBit(address)].append(temp)
                 # 해당 원소가 있으면 list[index]의 해당 블록을 삭제하고 가장 뒤로 보냄 (for eviction)
                 return True
         # 해당 원소가 없으면 false
@@ -42,10 +42,20 @@ class Cache:
 
     def cacheSetFull(self, address):
         for i in range(self.associativity):
-            if not self.Cache()[self.findIndexBit(address)][i]['tag']:
+            if not self.Cache[self.findIndexBit(address)][i]['tag']:
                 return False
             # Cache set 안에 하나라도 빈 cache block 이 있으면 false 를 반환, set 이 전부 차 있으면 True 를 반환
         return True
+
+    def add(self, address):
+        global dirty_eviction_count, clean_eviction_count
+        if self.cacheSetFull(address):
+            if self.Cache[self.findIndexBit(address)][0]["dirty"]:
+                dirty_eviction_count += 1
+            del self.Cache[self.findIndexBit(address)][0]
+            # 가장 첫번째 원소 삭제 -> LRU 구현
+        # 가장 마지막에 원소 추가하기
+        self.Cache[self.findIndexBit(address)].append({"dirty": False, "tag": self.findTagBit(address)})
 
     def read(self, address):
         global read_access_count, total_access_count, read_miss_count
@@ -60,11 +70,10 @@ class Cache:
         write_access_count += 1
         total_access_count += 1
         if self.access(address): # hit
-            self.Cache()[self.findIndexBit(address)][-1]['dirty'] = True
+            self.Cache[self.findIndexBit(address)][-1]['dirty'] = True
+        else: # miss
+            self.Cache[self.]
 
-
-    def eviction(self, address): # LRU 구현 dirty eviction과 clean eviction 구현
-        pass
 
     def findTagBit(self, address): # return; int value
         TagBit = int(bin(address)[:-(self.blockOffset+self.IndexBitLength)], 2)
